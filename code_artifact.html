@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>요리 맞춤형 타이머 & 레시피 가이드</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .animate-alarm {
+            animation: pulse-subtle 0.8s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-full flex flex-col justify-between font-sans transition-colors duration-300">
+
+    <!-- Header -->
+    <header class="w-full bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-100 py-4 px-6 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-amber-500 to-orange-500 text-white p-2.5 rounded-2xl shadow-md shadow-orange-500/20">
+                    <i class="fa-solid fa-utensils text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">셰프의 타이머 & 레시피</h1>
+                    <p class="text-xs text-slate-500">완벽한 조리 시간과 상세한 레시피 가이드</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="openCustomModal()" class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-md shadow-orange-500/20 transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>나만의 요리 추가</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-8">
+
+        <!-- Active Running Timers Section (Multi-Timer Dashboard) -->
+        <section id="active-timers-section" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-stopwatch text-orange-500"></i>
+                    <span>실행 중인 타이머</span>
+                </h2>
+                <span id="active-timers-count" class="text-xs font-semibold bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full">0개 작동 중</span>
+            </div>
+            <div id="active-timers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Empty state placeholder -->
+                <div id="no-active-timers" class="col-span-full bg-white border border-dashed border-slate-200 rounded-3xl p-8 text-center text-slate-400">
+                    <i class="fa-solid fa-clock text-3xl mb-2 text-slate-300"></i>
+                    <p class="text-sm font-medium">현재 작동 중인 타이머가 없습니다.</p>
+                    <p class="text-xs text-slate-400 mt-1">아래 레시피 카드에서 '타이머 시작'을 눌러보세요.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories and Search -->
+        <div class="space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <!-- Category Tabs -->
+                <div class="flex space-x-2 overflow-x-auto pb-2 scrollbar-none">
+                    <button onclick="filterCategory('all')" id="tab-all" class="category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white shadow-sm transition-all whitespace-nowrap">전체</button>
+                    <button onclick="filterCategory('noodle')" id="tab-noodle" class="category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all whitespace-nowrap">면류/분식</button>
+                    <button onclick="filterCategory('egg')" id="tab-egg" class="category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all whitespace-nowrap">달걀요리</button>
+                    <button onclick="filterCategory('meat')" id="tab-meat" class="category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all whitespace-nowrap">고기/구이</button>
+                    <button onclick="filterCategory('soup')" id="tab-soup" class="category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all whitespace-nowrap">밥/간편식</button>
+                    <button onclick="filterCategory('custom')" id="tab-custom" class="category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all whitespace-nowrap">커스텀</button>
+                </div>
+
+                <!-- Search Input -->
+                <div class="relative w-full sm:w-64">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-search text-xs"></i>
+                    </span>
+                    <input type="text" id="recipe-search" oninput="handleSearch(event)" placeholder="요리 이름 검색..." class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Cards Grid -->
+        <section class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-900">추천 레시피 컬렉션</h3>
+                <span id="recipe-count" class="text-xs text-slate-500 font-medium">총 0개</span>
+            </div>
+            <div id="recipe-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Dynamically populated via JavaScript -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full bg-white border-t border-slate-100 py-6 px-6 text-center text-xs text-slate-400 mt-12">
+        <p>© 2026 요리 맞춤형 타이머 & 레시피. 언제나 완벽한 조리 온도를 완성하세요.</p>
+    </footer>
+
+    <!-- Recipe Details Modal -->
+    <div id="recipe-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 transform transition-all max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <span id="modal-category" class="inline-block bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider mb-2">카테고리</span>
+                    <h3 id="modal-title" class="text-2xl font-extrabold text-slate-900">요리 이름</h3>
+                    <p id="modal-desc" class="text-xs text-slate-500 mt-1">요리 한줄 설명</p>
+                </div>
+                <button onclick="closeRecipeModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl bg-slate-100">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content Grid -->
+            <div class="space-y-6">
+                <!-- Time & Water Quick Bar -->
+                <div class="grid grid-cols-2 gap-4 bg-orange-50/60 p-4 rounded-2xl border border-orange-100">
+                    <div>
+                        <span class="text-xs text-orange-600 font-semibold block mb-0.5">조리 시간</span>
+                        <span id="modal-time" class="text-lg font-bold text-slate-900">0분 0초</span>
+                    </div>
+                    <div>
+                        <span class="text-xs text-orange-600 font-semibold block mb-0.5">권장 물 양</span>
+                        <span id="modal-water" class="text-sm font-bold text-slate-900">-</span>
+                    </div>
+                </div>
+
+                <!-- Ingredients List -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-900 mb-2 flex items-center space-x-2">
+                        <i class="fa-solid fa-basket-shopping text-orange-500"></i>
+                        <span>필요 재료</span>
+                    </h4>
+                    <div id="modal-ingredients" class="bg-slate-50 p-3.5 rounded-xl text-xs text-slate-700 leading-relaxed border border-slate-200/60">
+                        재료 정보가 없습니다.
+                    </div>
+                </div>
+
+                <!-- Heat Control & Tips -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/60">
+                        <span class="text-xs font-bold text-slate-900 block mb-1 flex items-center space-x-1.5">
+                            <i class="fa-solid fa-fire text-orange-500"></i>
+                            <span>불 조절 팁</span>
+                        </span>
+                        <p id="modal-heat" class="text-xs text-slate-600">중간 불</p>
+                    </div>
+                    <div class="bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/60">
+                        <span class="text-xs font-bold text-amber-900 block mb-1 flex items-center space-x-1.5">
+                            <i class="fa-solid fa-lightbulb text-amber-600"></i>
+                            <span>셰프의 특별 꿀팁</span>
+                        </span>
+                        <p id="modal-tip" class="text-xs text-amber-900">맛있게 만드는 요령</p>
+                    </div>
+                </div>
+
+                <!-- Step-by-Step Instructions -->
+                <div>
+                    <h4 class="text-sm font-bold text-slate-900 mb-2 flex items-center space-x-2">
+                        <i class="fa-solid fa-list-check text-orange-500"></i>
+                        <span>상세 조리 순서</span>
+                    </h4>
+                    <div id="modal-steps" class="space-y-2 text-xs sm:text-sm text-slate-700 bg-slate-50 p-4 rounded-2xl border border-slate-200/60 leading-relaxed">
+                        단계별 조리법
+                    </div>
+                </div>
+
+                <!-- Action Button in Modal -->
+                <div class="pt-2">
+                    <button id="modal-start-btn" onclick="startTimerFromModal()" class="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-orange-500/30 transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-play"></i>
+                        <span>이 요리 타이머 즉시 시작하기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Recipe Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 transform transition-all max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-900">나만의 요리 타이머 추가</h3>
+                <button onclick="closeCustomModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl bg-slate-100">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+            <form id="custom-form" onsubmit="handleCustomSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">요리 이름</label>
+                    <input type="text" id="custom-name" required placeholder="예: 해물파스타" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">분 (Minutes)</label>
+                        <input type="number" id="custom-minutes" min="0" max="120" value="8" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">초 (Seconds)</label>
+                        <input type="number" id="custom-seconds" min="0" max="59" value="0" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">카테고리</label>
+                    <select id="custom-category" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm bg-white">
+                        <option value="soup">밥/간편식</option>
+                        <option value="noodle">면류/분식</option>
+                        <option value="egg">달걀요리</option>
+                        <option value="meat">고기/구이</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">물 양 (선택)</label>
+                    <input type="text" id="custom-water" placeholder="예: 500ml (종이컵 3컵)" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">필요 재료</label>
+                    <input type="text" id="custom-ingredients" placeholder="예: 파스타면, 올리브오일, 마늘" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">불 조절 요령</label>
+                    <input type="text" id="custom-heat" placeholder="예: 센 불에서 끓이다가 중불로 줄이기" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">상세 조리 순서</label>
+                    <textarea id="custom-steps" rows="3" placeholder="1. 물을 끓입니다.&#10;2. 면을 넣고 삶습니다." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">셰프 팁</label>
+                    <input type="text" id="custom-tip" placeholder="예: 면수를 조금 남겨두면 소스가 잘 배어듭니다." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                </div>
+                <div class="flex space-x-3 pt-4">
+                    <button type="button" onclick="closeCustomModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all text-sm">취소</button>
+                    <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl shadow-md transition-all text-sm">추가하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert / Notification Dialog (Custom Box) -->
+    <div id="alert-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100 animate-alarm">
+            <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
+                <i class="fa-solid fa-bell-concierge"></i>
+            </div>
+            <h3 id="alert-title" class="text-xl font-bold text-slate-900 mb-2">조리가 완료되었습니다!</h3>
+            <p id="alert-message" class="text-sm text-slate-600 mb-6">맛있는 요리가 준비되었습니다. 맛있게 드세요!</p>
+            <button onclick="closeAlarmModal()" class="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-500/30 transition-all">확인</button>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Extended Recipe Database with full details
+        const defaultRecipes = [
+            {
+                id: '1',
+                name: '진라면 (순한맛/매운맛)',
+                time: 180,
+                category: 'noodle',
+                icon: 'fa-bowl-food',
+                desc: '쫄깃한 면발과 깔끔한 국물의 표준',
+                water: '500ml (종이컵 약 3컵)',
+                ingredients: '진라면 1봉지, 물 500ml, 대파 약간 (기호에 따라 달걀)',
+                heat: '처음 센 불 → 면 투입 후 중불',
+                steps: '1. 냄비에 물 500ml를 넣고 팔팔 끓입니다.\n2. 물이 끓으면 분말스프, 건더기스프, 면을 함께 넣습니다.\n3. 3분간 끓이며 면을 공기 중에 들었다 놓았다 하면 더 쫄깃해집니다.',
+                tip: '달걀을 넣을 경우 풀지 말고 그대로 익혀야 국물이 탁해지지 않습니다.'
+            },
+            {
+                id: '2',
+                name: '신라면',
+                time: 270,
+                category: 'noodle',
+                icon: 'fa-fire-flame-curved',
+                desc: '얼큰한 국물과 깊은 감칠맛의 정석',
+                water: '550ml (종이컵 약 3컵 반)',
+                ingredients: '신라면 1봉지, 물 550ml, 대파 및 청양고추 약간',
+                heat: '센 불 유지',
+                steps: '1. 물 550ml가 끓으면 면과 분말스프, 건더기스프를 넣습니다.\n2. 4분 30초 동안 센 불에서 끓여줍니다.\n3. 그릇에 담기 전 다진 마늘 반 스푼을 넣으면 맛이 배가됩니다.',
+                tip: '마지막에 후추를 살짝 톡톡 뿌려주면 풍미가 살아납니다.'
+            },
+            {
+                id: '3',
+                name: '짜파게티',
+                time: 300,
+                category: 'noodle',
+                icon: 'fa-plate-wheat',
+                desc: '달콤 짭조름한 짜장 라면',
+                water: '600ml (면 삶기용) + 밥숟가락 8스푼 남기기',
+                ingredients: '짜파게티 1봉지, 물 600ml, 올리브유, 과립스프',
+                heat: '면 삶을 때 센 불 → 소스 비빌 때 약불',
+                steps: '1. 물 600ml가 끓으면 면과 후레이크를 넣고 5분간 삶습니다.\n2. 물을 밥숟가락 기준 8스푼 정도만 남기고 따라 버립니다.\n3. 과립스프와 올리브유를 넣고 약불에서 1~2분간 볶아줍니다.',
+                tip: '면을 삶을 때 찬물을 한 번 끼얹어주면 면발이 더욱 찰집니다.'
+            },
+            {
+                id: '4',
+                name: '반숙 달걀 (부드러운 노른자)',
+                time: 420,
+                category: 'egg',
+                icon: 'fa-egg',
+                desc: '노른자가 촉촉하게 흐르는 반숙',
+                water: '달걀이 충분히 잠길 정도의 넉넉한 물',
+                ingredients: '달걀 2~3개, 소금 1스푼, 식초 1스푼',
+                heat: '물이 끓을 때 중불',
+                steps: '1. 냄비에 물을 끓이고 소금과 식초를 넣습니다.\n2. 냉장고에서 꺼낸 달걀을 숟가락으로 조심스럽게 넣습니다.\n3. 정확히 7분간 삶은 후 곧바로 얼음물에 담급니다.',
+                tip: '찬물에 완전히 식힌 후 껍질을 까야 깨끗하게 잘 까지니다.'
+            },
+            {
+                id: '5',
+                name: '완숙 달걀 (담백한 노른자)',
+                time: 660,
+                category: 'egg',
+                icon: 'fa-egg',
+                desc: '퍽퍽하지 않고 부드럽게 익은 완숙',
+                water: '달걀이 잠길 정도의 넉넉한 물',
+                ingredients: '달걀 2~3개, 소금 1스푼',
+                heat: '물이 끓을 때 중불',
+                steps: '1. 끓는 물에 달걀을 조심스럽게 넣습니다.\n2. 11분간 삶아줍니다.\n3. 찬물에 10분 이상 담가 완전히 식혀줍니다.',
+                tip: '노른자 중앙까지 완벽하게 익으면서도 부드러운 최적의 시간입니다.'
+            },
+            {
+                id: '6',
+                name: '삼겹살 에어프라이어 구이',
+                time: 900,
+                category: 'meat',
+                icon: 'fa-bacon',
+                desc: '기름은 빠지고 겉바속촉 완성',
+                water: '없음',
+                ingredients: '삼겹살 500g, 허브솔트 또는 소금/후추 약간, 마늘',
+                heat: '에어프라이어 200도',
+                steps: '1. 에어프라이어 바스켓에 삼겹살을 겹치지 않게 올립니다.\n2. 200도에서 15분간 1차로 구워줍니다.\n3. 중간에 한번 뒤집어서 노릇하게 구워줍니다.',
+                tip: '종이호일을 깔고 구우면 뒤처리가 편리합니다.'
+            },
+            {
+                id: '7',
+                name: '햇반 (전자레인지)',
+                time: 120,
+                category: 'soup',
+                icon: 'fa-box-archive',
+                desc: '갓 지은 밥처럼 촉촉하고 따뜻하게',
+                water: '없음 (점선까지 개봉)',
+                ingredients: '즉석밥 햇반 1개',
+                heat: '전자레인지 700W / 1000W 기준',
+                steps: '1. 상단 비닐을 점선까지만 살짝 뜯어냅니다.\n2. 전자레인지에 넣고 2분간 데워줍니다.\n3. 완전히 껍질을 벗겨 1분간 뜸을 들인 후 잘 섞어줍니다.',
+                tip: '여러 개를 데울 때는 시간을 1분씩 추가해주세요.'
+            },
+            {
+                id: '8',
+                name: '냉동만두 찌기',
+                time: 480,
+                category: 'soup',
+                icon: 'fa-bowl-rice',
+                desc: '만두피가 촉촉하고 쫄깃한 찜기 조리',
+                water: '찜기 냄비 물 500ml 이상',
+                ingredients: '냉동만두 6~8개, 찜기 및 면보',
+                heat: '센 불에서 김이 오른 후 중불',
+                steps: '1. 찜기 냄비에 물을 붓고 팔팔 끓여 김을 올립니다.\n2. 찜기에 만두를 겹치지 않게 올리고 뚜껑을 덮습니다.\n3. 8분간 중불에서 쪄냅니다.',
+                tip: '냉동 상태 그대로 쪄야 만두피가 터지지 않고 모양이 유지됩니다.'
+            }
+        ];
+
+        let recipes = [...defaultRecipes];
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        // Multi-timer management: array of running/paused timer objects
+        // { id, recipeName, totalSeconds, remainingSeconds, state ('RUNNING'|'PAUSED'|'FINISHED'), intervalId }
+        let activeTimers = [];
+
+        // Audio Context for synthetic alert chime
+        let audioCtx = null;
+        let selectedRecipeForModal = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playChime() {
+            try {
+                initAudio();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const now = audioCtx.currentTime;
+                
+                [0, 0.25, 0.5].forEach((delay, index) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    
+                    osc.type = 'sine';
+                    const frequencies = [523.25, 659.25, 783.99];
+                    osc.frequency.setValueAtTime(frequencies[index], now + delay);
+                    
+                    gain.gain.setValueAtTime(0.3, now + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.6);
+                    
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    osc.start(now + delay);
+                    osc.stop(now + delay + 0.6);
+                });
+            } catch (e) {
+                console.log('Audio playback prevented or unsupported:', e);
+            }
+        }
+
+        // Render recipe grid
+        function renderRecipes() {
+            const grid = document.getElementById('recipe-grid');
+            grid.innerHTML = '';
+
+            let filtered = currentFilter === 'all' 
+                ? recipes 
+                : recipes.filter(r => r.category === currentFilter);
+
+            if (searchQuery.trim() !== '') {
+                const query = searchQuery.toLowerCase();
+                filtered = filtered.filter(r => r.name.toLowerCase().includes(query) || (r.desc && r.desc.toLowerCase().includes(query)));
+            }
+
+            document.getElementById('recipe-count').innerText = `총 ${filtered.length}개`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-slate-400 bg-white border border-slate-100 rounded-3xl">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2 text-slate-300"></i>
+                        <p class="text-sm font-medium">검색 결과나 등록된 요리가 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(recipe => {
+                const mins = Math.floor(recipe.time / 60);
+                const secs = recipe.time % 60;
+                const timeStr = `${mins > 0 ? mins + '분 ' : ''}${secs > 0 ? secs + '초' : (mins === 0 ? '0초' : '')}`;
+                
+                const card = document.createElement('div');
+                card.className = "bg-white hover:bg-orange-50/20 border border-slate-100 hover:border-orange-200 p-5 rounded-3xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between group";
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all shadow-sm">
+                                <i class="fa-solid ${recipe.icon || 'fa-utensils'}"></i>
+                            </div>
+                            <span class="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-xl">${timeStr}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-900 group-hover:text-orange-600 transition-colors mb-1 text-base">${recipe.name}</h4>
+                        <p class="text-xs text-slate-500 line-clamp-1 mb-3">${recipe.desc || '맞춤형 조리 타이머'}</p>
+                        
+                        <div class="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-droplet text-orange-500 w-3"></i>
+                                <span class="truncate">물: ${recipe.water || '없음'}</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-fire text-orange-500 w-3"></i>
+                                <span class="truncate">불조절: ${recipe.heat || '표준'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button onclick="openRecipeModal('${recipe.id}')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-book-open"></i>
+                            <span>레시피 보기</span>
+                        </button>
+                        <button onclick="startNewTimer('${recipe.id}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2.5 px-3 rounded-xl shadow-sm shadow-orange-500/20 transition-all flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-play"></i>
+                            <span>타이머 시작</span>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Filter tab selection
+        function filterCategory(category) {
+            currentFilter = category;
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.className = "category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all whitespace-nowrap";
+            });
+            const activeTab = document.getElementById(`tab-${category}`);
+            if (activeTab) {
+                activeTab.className = "category-tab px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white shadow-sm transition-all whitespace-nowrap";
+            }
+            renderRecipes();
+        }
+
+        function handleSearch(event) {
+            searchQuery = event.target.value;
+            renderRecipes();
+        }
+
+        // Recipe Detail Modal Management
+        function openRecipeModal(id) {
+            const recipe = recipes.find(r => r.id === id);
+            if (!recipe) return;
+            selectedRecipeForModal = recipe;
+
+            const catMap = { noodle: '면류/분식', egg: '달걀요리', meat: '고기/구이', soup: '밥/간편식', custom: '커스텀' };
+            document.getElementById('modal-category').innerText = catMap[recipe.category] || '요리';
+            document.getElementById('modal-title').innerText = recipe.name;
+            document.getElementById('modal-desc').innerText = recipe.desc || '';
+            
+            const mins = Math.floor(recipe.time / 60);
+            const secs = recipe.time % 60;
+            document.getElementById('modal-time').innerText = `${mins > 0 ? mins + '분 ' : ''}${secs > 0 ? secs + '초' : ''}`;
+            document.getElementById('modal-water').innerText = recipe.water || '해당 없음';
+            document.getElementById('modal-ingredients').innerText = recipe.ingredients || '기본 재료';
+            document.getElementById('modal-heat').innerText = recipe.heat || '중간 불';
+            document.getElementById('modal-tip').innerText = recipe.tip || '맛있는 조리를 완성하세요!';
+
+            const stepsElem = document.getElementById('modal-steps');
+            if (recipe.steps) {
+                stepsElem.innerHTML = recipe.steps.replace(/\n/g, '<br>');
+            } else {
+                stepsElem.innerText = '상세 조리 방법이 준비 중입니다.';
+            }
+
+            document.getElementById('recipe-modal').classList.remove('hidden');
+        }
+
+        function closeRecipeModal() {
+            document.getElementById('recipe-modal').classList.add('hidden');
+            selectedRecipeForModal = null;
+        }
+
+        function startTimerFromModal() {
+            if (selectedRecipeForModal) {
+                startNewTimer(selectedRecipeForModal.id);
+                closeRecipeModal();
+            }
+        }
+
+        // Multi-Timer Actions
+        function startNewTimer(recipeId) {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+            initAudio();
+
+            const timerObj = {
+                id: 'timer-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                recipeName: recipe.name,
+                totalSeconds: recipe.time,
+                remainingSeconds: recipe.time,
+                state: 'RUNNING',
+                intervalId: null
+            };
+
+            activeTimers.push(timerObj);
+            renderActiveTimers();
+            runTimerInterval(timerObj);
+
+            // Smooth scroll to active timers section
+            document.getElementById('active-timers-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function runTimerInterval(timerObj) {
+            const startTime = Date.now();
+            const initialRemaining = timerObj.remainingSeconds;
+
+            timerObj.intervalId = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                timerObj.remainingSeconds = initialRemaining - elapsed;
+
+                if (timerObj.remainingSeconds <= 0) {
+                    timerObj.remainingSeconds = 0;
+                    clearInterval(timerObj.intervalId);
+                    timerObj.state = 'FINISHED';
+                    renderActiveTimers();
+                    triggerAlarm(timerObj.recipeName);
+                } else {
+                    updateTimerCardDisplay(timerObj);
+                }
+            }, 200);
+        }
+
+        function pauseActiveTimer(timerId) {
+            const timer = activeTimers.find(t => t.id === timerId);
+            if (!timer) return;
+            if (timer.state === 'RUNNING') {
+                clearInterval(timer.intervalId);
+                timer.state = 'PAUSED';
+                renderActiveTimers();
+            }
+        }
+
+        function resumeActiveTimer(timerId) {
+            const timer = activeTimers.find(t => t.id === timerId);
+            if (!timer) return;
+            if (timer.state === 'PAUSED') {
+                timer.state = 'RUNNING';
+                renderActiveTimers();
+                runTimerInterval(timer);
+            }
+        }
+
+        function resetActiveTimer(timerId) {
+            const timer = activeTimers.find(t => t.id === timerId);
+            if (!timer) return;
+            clearInterval(timer.intervalId);
+            timer.remainingSeconds = timer.totalSeconds;
+            timer.state = 'PAUSED';
+            renderActiveTimers();
+        }
+
+        function removeActiveTimer(timerId) {
+            const timer = activeTimers.find(t => t.id === timerId);
+            if (timer) {
+                clearInterval(timer.intervalId);
+            }
+            activeTimers = activeTimers.filter(t => t.id !== timerId);
+            renderActiveTimers();
+        }
+
+        function updateTimerCardDisplay(timer) {
+            const mins = Math.floor(timer.remainingSeconds / 60);
+            const secs = timer.remainingSeconds % 60;
+            const minElem = document.getElementById(`min-${timer.id}`);
+            const secElem = document.getElementById(`sec-${timer.id}`);
+            if (minElem && secElem) {
+                minElem.innerText = String(mins).padStart(2, '0');
+                secElem.innerText = String(secs).padStart(2, '0');
+            }
+        }
+
+        function renderActiveTimers() {
+            const grid = document.getElementById('active-timers-grid');
+            document.getElementById('active-timers-count').innerText = `${activeTimers.length}개 작동 중`;
+
+            if (activeTimers.length === 0) {
+                grid.innerHTML = `
+                    <div id="no-active-timers" class="col-span-full bg-white border border-dashed border-slate-200 rounded-3xl p-8 text-center text-slate-400">
+                        <i class="fa-solid fa-clock text-3xl mb-2 text-slate-300"></i>
+                        <p class="text-sm font-medium">현재 작동 중인 타이머가 없습니다.</p>
+                        <p class="text-xs text-slate-400 mt-1">아래 레시피 카드에서 '타이머 시작'을 눌러보세요.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = '';
+            activeTimers.forEach(timer => {
+                const mins = Math.floor(timer.remainingSeconds / 60);
+                const secs = timer.remainingSeconds % 60;
+                
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-3xl p-5 shadow-sm border ${timer.state === 'FINISHED' ? 'border-red-300 animate-alarm bg-red-50/40' : 'border-slate-100'} flex flex-col justify-between`;
+
+                let actionButtons = '';
+                if (timer.state === 'RUNNING') {
+                    actionButtons = `
+                        <button onclick="pauseActiveTimer('${timer.id}')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 rounded-xl transition-all">일시정지</button>
+                    `;
+                } else if (timer.state === 'PAUSED') {
+                    actionButtons = `
+                        <button onclick="resumeActiveTimer('${timer.id}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2.5 rounded-xl transition-all">재개</button>
+                        <button onclick="resetActiveTimer('${timer.id}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2.5 px-4 rounded-xl transition-all">리셋</button>
+                    `;
+                } else if (timer.state === 'FINISHED') {
+                    actionButtons = `
+                        <button onclick="resetActiveTimer('${timer.id}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2.5 rounded-xl transition-all">다시시작</button>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold ${timer.state === 'FINISHED' ? 'text-red-600 bg-red-100' : 'text-orange-600 bg-orange-50'} px-2.5 py-1 rounded-xl">
+                            ${timer.state === 'FINISHED' ? '조리 완료!' : (timer.state === 'RUNNING' ? '타이머 작동 중...' : '일시정지')}
+                        </span>
+                        <button onclick="removeActiveTimer('${timer.id}')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
+                    </div>
+
+                    <h4 class="font-bold text-slate-900 mb-3 text-base truncate">${timer.recipeName}</h4>
+
+                    <div class="flex items-center justify-center bg-slate-50 rounded-2xl py-4 mb-4 border border-slate-100">
+                        <span id="min-${timer.id}" class="text-4xl font-black text-slate-900 tracking-tight">${String(mins).padStart(2, '0')}</span>
+                        <span class="text-3xl font-bold text-orange-500 mx-1">:</span>
+                        <span id="sec-${timer.id}" class="text-4xl font-black text-slate-900 tracking-tight">${String(secs).padStart(2, '0')}</span>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        ${actionButtons}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function triggerAlarm(recipeName) {
+            playChime();
+            document.getElementById('alert-title').innerText = `${recipeName} 조리 완료!`;
+            document.getElementById('alert-message').innerText = `설정하신 조리 시간이 모두 경과했습니다. 맛있게 드세요!`;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        }
+
+        function closeAlarmModal() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
+        // Custom Recipe Modal
+        function openCustomModal() {
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function closeCustomModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        function handleCustomSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById('custom-name').value;
+            const mins = parseInt(document.getElementById('custom-minutes').value) || 0;
+            const secs = parseInt(document.getElementById('custom-seconds').value) || 0;
+            const category = document.getElementById('custom-category').value;
+            const water = document.getElementById('custom-water').value;
+            const ingredients = document.getElementById('custom-ingredients').value;
+            const heat = document.getElementById('custom-heat').value;
+            const steps = document.getElementById('custom-steps').value;
+            const tip = document.getElementById('custom-tip').value;
+
+            const totalSecs = (mins * 60) + secs;
+            if (totalSecs <= 0) {
+                alert('0보다 큰 조리 시간을 입력해주세요.');
+                return;
+            }
+
+            const newRecipe = {
+                id: 'custom-' + Date.now(),
+                name: name,
+                time: totalSecs,
+                category: 'custom',
+                icon: 'fa-utensils',
+                desc: '사용자 등록 커스텀 레시피',
+                water: water || '요리에 맞게 준비',
+                ingredients: ingredients || '기본 식재료',
+                heat: heat || '중간 불',
+                steps: steps || '1. 요리 재료를 손질합니다.\n2. 알맞은 시간에 맞춰 조리합니다.',
+                tip: tip || '나만의 맛있는 레시피를 완성해보세요!'
+            };
+
+            recipes.push(newRecipe);
+            closeCustomModal();
+            document.getElementById('custom-form').reset();
+
+            filterCategory('custom');
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            renderRecipes();
+            renderActiveTimers();
+        };
+    </script>
+</body>
+</html>
